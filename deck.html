@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompting vs RAG vs Fine-Tuning — AI Learning Series</title>
+    <meta name="description" content="A beginner-friendly presentation comparing Prompting, RAG, and Fine-Tuning strategies for LLM customization">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* ══════════════════════════════════════════════════════
+           DESIGN SYSTEM
+           ══════════════════════════════════════════════════════ */
+        :root {
+            --bg-primary: #0a0a1a;
+            --bg-secondary: #111128;
+            --bg-card: rgba(255,255,255,0.04);
+            --bg-card-hover: rgba(255,255,255,0.07);
+            --text-primary: #f0f0f5;
+            --text-secondary: #9595b0;
+            --text-muted: #65658a;
+            --accent-pink: #e94560;
+            --accent-purple: #8b5cf6;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --gradient-hero: linear-gradient(135deg, #e94560 0%, #8b5cf6 50%, #3b82f6 100%);
+            --gradient-prompting: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+            --gradient-rag: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+            --gradient-finetune: linear-gradient(135deg, #e94560 0%, #f59e0b 100%);
+            --border-subtle: rgba(255,255,255,0.08);
+            --shadow-glow: 0 0 60px rgba(139,92,246,0.15);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-xs: 6px;
+            --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ══════════════════════════════════════════════════════
+           SLIDE SYSTEM
+           ══════════════════════════════════════════════════════ */
+        .slide {
+            min-height: 100vh;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 60px 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at 30% 20%, rgba(139,92,246,0.06) 0%, transparent 60%),
+                        radial-gradient(ellipse at 70% 80%, rgba(59,130,246,0.04) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .slide-number {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            font-family: var(--font-mono);
+        }
+
+        .slide-indicator {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slide-indicator a {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            opacity: 0.4;
+            transition: all 0.3s ease;
+            display: block;
+        }
+
+        .slide-indicator a:hover,
+        .slide-indicator a.active {
+            opacity: 1;
+            background: var(--accent-purple);
+            transform: scale(1.4);
+        }
+
+        /* ══════════════════════════════════════════════════════
+           TYPOGRAPHY
+           ══════════════════════════════════════════════════════ */
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 16px;
+        }
+
+        h1 .gradient-text {
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-size: clamp(1.6rem, 3vw, 2.2rem);
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        p, li {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-bottom: 40px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-prompting { background: rgba(139,92,246,0.15); color: #a78bfa; }
+        .badge-rag { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .badge-finetune { background: rgba(233,69,96,0.15); color: #f87171; }
+        .badge-hybrid { background: rgba(16,185,129,0.15); color: #34d399; }
+
+        blockquote {
+            border-left: 3px solid var(--accent-purple);
+            padding: 16px 24px;
+            margin: 20px 0;
+            background: rgba(139,92,246,0.06);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        blockquote cite {
+            display: block;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-style: normal;
+        }
+
+        /* ══════════════════════════════════════════════════════
+           CARDS & GRID
+           ══════════════════════════════════════════════════════ */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin: 24px 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin: 24px 0;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            padding: 28px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(139,92,246,0.2);
+            transform: translateY(-2px);
+        }
+
+        .card-icon {
+            font-size: 2.2rem;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .card h4 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .card p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        /* ══════════════════════════════════════════════════════
+           TABLES
+           ══════════════════════════════════════════════════════ */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-subtle);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92rem;
+        }
+
+        thead th {
+            background: rgba(139,92,246,0.1);
+            padding: 14px 18px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-subtle);
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            vertical-align: top;
+        }
+
+        tbody tr:last-child td { border-bottom: none; }
+
+        tbody tr:hover {
+            background: rgba(139,92,246,0.04);
+        }
+
+        tbody td:first-child {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .indicator { font-size: 1rem; }
+
+        /* ══════════════════════════════════════════════════════
+           CODE BLOCKS
+           ══════════════════════════════════════════════════════ */
+        .code-block {
+            background: #0d1117;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--radius-sm);
+            padding: 24px;
+            margin: 16px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block .lang-label {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: var(--font-mono);
+        }
+
+        pre {
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            line-height: 1.65;
+            color: #c9d1d9;
+            white-space: pre;
+            tab-size: 4;
+        }
+
+        .code-comment { color: #8b949e; }
+        .code-keyword { color: #ff7b72; }
+        .code-string { color: #a5d6ff; }
+        .code-function { color: #d2a8ff; }
+        .code-variable { color: #ffa657; }
+        .code-operator { color: #ff7b72; }
+
+        .code-block-small pre {
+            font-size: 0.75rem;
+            line-height: 1.55;
+        }
+
+        /* ══════════════════════════════════════════════════════
+           FLOW DIAGRAMS
+           ══════════════════════════════════════════════════════ */
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 24px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .flow-node {
+            padding: 14px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            min-width: 120px;
+            line-height: 1.4;
+        }
+
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        /* ══════════════════════════════════════════════════════
+           DECISION TREE
+           ══════════════════════════════════════════════════════ */
+        .decision-tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .dt-node {
+            padding: 16px 24px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.9rem;
+            max-width: 320px;
+        }
+
+        .dt-branches {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .dt-branch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dt-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ══════════════════════════════════════════════════════
+           SPECIAL ELEMENTS
+           ══════════════════════════════════════════════════════ */
+        .analogy-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin: 24px 0;
+        }
+
+        .analogy-card {
+            text-align: center;
+            padding: 28px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+        }
+
+        .analogy-card .emoji { font-size: 3rem; margin-bottom: 12px; display: block; }
+        .analogy-card h4 { font-size: 1rem; margin-bottom: 8px; color: var(--text-primary); }
+        .analogy-card p { font-size: 0.88rem; color: var(--text-secondary); }
+
+        .mistake-item {
+            display: flex;
+            gap: 16px;
+            margin: 12px 0;
+            padding: 16px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .mistake-icon { font-size: 1.5rem; flex-shrink: 0; }
+
+        .tag-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 8px 0;
+        }
+
+        .tag {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.06);
+            color: var(--text-secondary);
+        }
+
+        .section-divider {
+            width: 60px;
+            height: 3px;
+            background: var(--gradient-hero);
+            border-radius: 3px;
+            margin: 16px 0;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.05) 100%);
+            border: 1px solid rgba(139,92,246,0.15);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin: 16px 0;
+        }
+
+        .steps-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 14px 18px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .step-content p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Keyboard nav hint */
+        .nav-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            z-index: 100;
+            padding: 8px 20px;
+            background: rgba(10,10,26,0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid var(--border-subtle);
+            opacity: 1;
+            transition: opacity 1s ease;
+        }
+
+        .nav-hint.hidden { opacity: 0; pointer-events: none; }
+
+        .nav-hint kbd {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            margin: 0 2px;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--gradient-hero);
+            z-index: 200;
+            transition: width 0.3s ease;
+        }
+
+        /* ══════════════════════════════════════════════════════
+           ANIMATIONS
+           ══════════════════════════════════════════════════════ */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.6s ease forwards;
+            opacity: 0;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+        .delay-5 { animation-delay: 0.5s; }
+
+        /* ══════════════════════════════════════════════════════
+           PRESENTER NOTES PANEL
+           ══════════════════════════════════════════════════════ */
+        .presenter-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10,10,26,0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-subtle);
+            padding: 20px 40px;
+            transform: translateY(100%);
+            transition: transform 0.4s ease;
+            z-index: 150;
+            max-height: 35vh;
+            overflow-y: auto;
+        }
+
+        .presenter-panel.visible { transform: translateY(0); }
+
+        .presenter-panel h4 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent-purple);
+            margin-bottom: 10px;
+        }
+
+        .presenter-panel ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .presenter-panel li {
+            padding: 4px 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .presenter-panel li::before {
+            content: '▸ ';
+            color: var(--accent-purple);
+        }
+
+        .notes-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 60px;
+            z-index: 200;
+            background: rgba(139,92,246,0.2);
+            border: 1px solid rgba(139,92,246,0.3);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: var(--font-sans);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .notes-toggle:hover {
+            background: rgba(139,92,246,0.35);
+        }
+
+        /* ══════════════════════════════════════════════════════
+           RESPONSIVE
+           ══════════════════════════════════════════════════════ */
+        @media (max-width: 900px) {
+            .slide { padding: 40px 24px; }
+            .grid-3 { grid-template-columns: 1fr; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .two-col { grid-template-columns: 1fr; }
+            .analogy-row { grid-template-columns: 1fr; }
+            .dt-branches { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Progress Bar -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- Navigation Dots -->
+<nav class="slide-indicator" id="slideNav"></nav>
+
+<!-- Nav Hint -->
+<div class="nav-hint" id="navHint">
+    Navigate: <kbd>&uarr;</kbd> <kbd>&darr;</kbd> arrows &nbsp;|&nbsp; <kbd>N</kbd> toggle notes &nbsp;|&nbsp; Scroll
+</div>
+
+<!-- Notes Toggle -->
+<button class="notes-toggle" onclick="toggleNotes()" id="notesBtn">📝 Notes (N)</button>
+
+<!-- Presenter Notes Panel -->
+<div class="presenter-panel" id="presenterPanel">
+    <h4>📝 Presenter Notes</h4>
+    <ul id="presenterNotes"></ul>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 1 — TITLE
+     ═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="slide-1" data-notes="Hi everyone, welcome to today's session. So in our AI learning series, we have already covered what LLMs are and how they work. Today I want to talk about something very practical — when you are working with an LLM, there are three main ways to customize it: Prompting, RAG, and Fine-Tuning.||The most important thing I want you to take away today is — these three are NOT competing with each other. They solve different problems. Think of it like a toolkit — you pick the right tool for the right job.||By the end of this 15-minute talk, you will know exactly when to use which one. So let's jump in.">
+    <span class="slide-number">01 / 09</span>
+    <div>
+        <h3 class="animate-in">AI Learning Series</h3>
+        <h1 class="animate-in delay-1">
+            <span class="gradient-text">Prompting vs RAG<br>vs Fine-Tuning</span>
+        </h1>
+        <p class="subtitle animate-in delay-2">When to Use Which — A Practical Guide</p>
+        <div class="section-divider animate-in delay-3"></div>
+
+        <blockquote class="animate-in delay-4" style="margin-top: 30px; max-width: 700px;">
+            These are <strong style="color:var(--text-primary)">not</strong> competing techniques — they are <strong style="color:var(--accent-green)">complementary layers</strong>. Most production systems use a combination of all three.
+        </blockquote>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 2 — MENTAL MODEL (3 LAYERS)
+     ═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="slide-2" data-notes="OK so the simplest way to understand these three is through this mental model. Think of an LLM as a very smart chef in a kitchen.||Prompting is like giving that chef verbal instructions. You say — make it spicy, give me bullet points, answer in Hindi. You are just talking to the chef differently. The chef is the same, the knowledge is the same, you are just changing HOW you ask.||RAG is like handing the chef a recipe book. The chef is smart but doesn't know your company's lease documents or your internal policies. So you fetch the relevant pages and put them on the counter. Now the chef can refer to them while cooking. This is what RAG does — it retrieves your data and shows it to the model at the time of the question.||Fine-tuning is like sending the chef to culinary school. You actually change the chef. After training, the chef permanently behaves differently — maybe always responds in JSON, or always uses a formal tone. The chef itself changes.||So to summarize: Prompting changes how you talk, RAG changes what info is available, Fine-tuning changes the model itself. These map to Communication, Knowledge, and Behavior. Let that sink in for a moment.">
+    <span class="slide-number">02 / 09</span>
+    <div>
+        <h2>🗺️ The Mental Model — <span class="gradient-text">3 Layers</span></h2>
+        <p class="subtitle" style="font-size:1.05rem;">LLM Customization as complementary layers, not competing choices</p>
+
+        <div class="grid-3">
+            <div class="card" style="border-top: 3px solid #8b5cf6;">
+                <span class="card-icon">🎯</span>
+                <h4>Prompting</h4>
+                <p style="color: #a78bfa; font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;">THE INSTRUCTION LAYER</p>
+                <p>"How you <strong>talk</strong> to the model"</p>
+                <p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);">Nothing changes — you just ask better</p>
+            </div>
+
+            <div class="card" style="border-top: 3px solid #3b82f6;">
+                <span class="card-icon">📚</span>
+                <h4>RAG</h4>
+                <p style="color: #60a5fa; font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;">THE KNOWLEDGE LAYER</p>
+                <p>"What you <strong>show</strong> the model"</p>
+                <p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);">Give it your data at query time</p>
+            </div>
+
+            <div class="card" style="border-top: 3px solid #e94560;">
+                <span class="card-icon">🔧</span>
+                <h4>Fine-Tuning</h4>
+                <p style="color: #f87171; font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;">THE BEHAVIOR LAYER</p>
+                <p>"How you <strong>train</strong> the model"</p>
+                <p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);">The model itself permanently changes</p>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 30px;">🍳 The Chef Analogy</h3>
+        <div class="analogy-row">
+            <div class="analogy-card">
+                <span class="emoji">🗣️</span>
+                <h4 style="color: #a78bfa;">Prompting</h4>
+                <p>Giving the chef <strong>verbal instructions</strong><br>"Make it spicy, give me bullet points"</p>
+                <p style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">Same chef, same knowledge</p>
+            </div>
+            <div class="analogy-card">
+                <span class="emoji">📖</span>
+                <h4 style="color: #60a5fa;">RAG</h4>
+                <p>Handing the chef a <strong>recipe book</strong><br>"Here's our company data, refer to it"</p>
+                <p style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">New information at cook-time</p>
+            </div>
+            <div class="analogy-card">
+                <span class="emoji">🎓</span>
+                <h4 style="color: #f87171;">Fine-Tuning</h4>
+                <p><strong>Sending the chef to culinary school</strong><br>"Learn a new cuisine permanently"</p>
+                <p style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">The chef itself changes</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 3 — WHEN TO USE WHICH (BEGINNER DECISION GUIDE)
+     ═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="slide-3" data-notes="OK so now the practical question — when do I use which? Here is a very simple way to think about it.||Ask yourself three questions. Question 1: Does the model need information it does not have? Like your company's internal documents, your policies, your lease data? If yes, use RAG. RAG gives it external data.||Question 2: Is the model giving you bad formatting, bad reasoning, or messy output? Like you want JSON but it gives you paragraphs? Then write a better prompt. Use few-shot examples or chain-of-thought. This is a prompting problem.||Question 3: You have tried good prompts, but the model is still inconsistent? Like sometimes it follows the format and sometimes it does not? And this is happening at scale — hundreds of requests? Then fine-tune. Fine-tuning makes the behavior permanent.||And the golden rule is: always start with prompting. It is free and takes 30 seconds. Then add RAG if you need external data. Fine-tune only as a last resort. Never skip steps.">
+    <span class="slide-number">03 / 09</span>
+    <div>
+        <h2>🧭 <span class="gradient-text">When to Use Which?</span></h2>
+        <p class="subtitle" style="font-size:1rem; margin-bottom: 24px;">Ask yourself these 3 simple questions</p>
+
+        <div class="grid-3" style="margin-bottom: 24px;">
+            <div class="card" style="border-top: 3px solid #3b82f6;">
+                <span class="card-icon">❓</span>
+                <h4>Q1: Does it need data it doesn't have?</h4>
+                <p style="margin-bottom: 12px;">Company docs, policies, live data, anything the model was never trained on</p>
+                <div style="padding: 12px; background: rgba(59,130,246,0.1); border-radius: var(--radius-sm); text-align: center;">
+                    <p style="font-size: 1.1rem; font-weight: 700; color: var(--accent-blue);">→ Use RAG 📚</p>
+                </div>
+            </div>
+
+            <div class="card" style="border-top: 3px solid #8b5cf6;">
+                <span class="card-icon">❓</span>
+                <h4>Q2: Is the output format or reasoning bad?</h4>
+                <p style="margin-bottom: 12px;">Messy structure, wrong logic, no step-by-step thinking</p>
+                <div style="padding: 12px; background: rgba(139,92,246,0.1); border-radius: var(--radius-sm); text-align: center;">
+                    <p style="font-size: 1.1rem; font-weight: 700; color: var(--accent-purple);">→ Better Prompting 🎯</p>
+                </div>
+            </div>
+
+            <div class="card" style="border-top: 3px solid #e94560;">
+                <span class="card-icon">❓</span>
+                <h4>Q3: Good prompts but still inconsistent at scale?</h4>
+                <p style="margin-bottom: 12px;">Works sometimes, breaks sometimes, need it reliable for 1000s of requests</p>
+                <div style="padding: 12px; background: rgba(233,69,96,0.1); border-radius: var(--radius-sm); text-align: center;">
+                    <p style="font-size: 1.1rem; font-weight: 700; color: var(--accent-pink);">→ Fine-Tune 🔧</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="highlight-box">
+            <h4 style="font-size: 1rem; color: var(--text-primary); margin-bottom: 10px;">🪜 The Golden Rule — Always start simple, escalate only when needed</h4>
+            <div class="flow-diagram" style="margin: 8px 0;">
+                <div class="flow-node" style="background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.25); color: var(--accent-purple);">Step 1: Prompting<br><span style="font-size: 0.75rem; font-weight: 400;">Always start here</span></div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-node" style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.25); color: var(--accent-blue);">Step 2: Add RAG<br><span style="font-size: 0.75rem; font-weight: 400;">If needs external data</span></div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-node" style="background: rgba(233,69,96,0.15); border: 1px solid rgba(233,69,96,0.25); color: var(--accent-pink);">Step 3: Fine-Tune<br><span style="font-size: 0.75rem; font-weight: 400;">Last resort only</span></div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-node" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.25); color: var(--accent-green);">🏆 Combine All<br><span style="font-size: 0.75rem; font-weight: 400;">Production systems</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 4 — COMMON MISTAKES
+     ═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="slide-4" data-notes="Before we go into each technique, let me share the most common mistakes people make. This will save you a lot of pain.||The NUMBER ONE mistake — and I want everyone to remember this — is using fine-tuning when you should use RAG. Someone says 'the model doesn't know our company data, let's fine-tune it.' NO. That is a knowledge problem, not a behavior problem. Use RAG for knowledge. Fine-tuning teaches style and format, not facts.||For prompting, the biggest mistake is being vague. If you just say 'summarize this' — the model will guess the format, the length, everything. Instead, be specific: '3 bullet points, max 20 words each, focus on financial impact.' Give it clear instructions and it will give you clear output.||For RAG, the biggest mistake is dumping too many documents into the context. People think more context equals better answers. Wrong. The model actually pays most attention to the beginning and end of the context. The stuff in the middle gets ignored — this is called the 'Lost in the Middle' problem. Always send fewer, better chunks. Use 3 to 5 relevant chunks, not 20.||These mistakes are very common even in experienced teams, so being aware of them puts you ahead.">
+    <span class="slide-number">04 / 09</span>
+    <div>
+        <h2>⚠️ <span style="color: var(--accent-orange);">Common Mistakes</span> to Avoid</h2>
+
+        <div class="highlight-box" style="border-color: rgba(233,69,96,0.3); background: rgba(233,69,96,0.05); margin-bottom: 24px;">
+            <div class="two-col" style="gap: 20px;">
+                <div>
+                    <h4 style="font-size: 1rem; color: var(--accent-red);">🚨 The #1 Mistake</h4>
+                    <div class="code-block code-block-small" style="margin: 8px 0;">
+<pre><span class="code-comment">"The model doesn't know our company data"</span>
+<span class="code-comment">"Let's fine-tune it on our documents!"</span></pre>
+                    </div>
+                </div>
+                <div>
+                    <h4 style="font-size: 1rem; color: var(--accent-green);">✅ The Right Answer</h4>
+                    <div class="code-block code-block-small" style="margin: 8px 0;">
+<pre><span class="code-comment">This is a KNOWLEDGE problem → Use RAG</span>
+<span class="code-comment">Fine-tuning teaches STYLE, not FACTS</span>
+<span class="code-comment">It teaches HOW to respond, not WHAT to say</span></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div>
+                <h3 style="color: #a78bfa;">🎯 Prompting</h3>
+                <div class="mistake-item"><span class="mistake-icon">❌</span><div><strong style="color: var(--text-primary); font-size: 0.88rem;">Being too vague</strong><p style="font-size: 0.8rem;">"Summarize this" → Be specific: "3 bullets, max 20 words, focus on finances"</p></div></div>
+                <div class="mistake-item"><span class="mistake-icon">❌</span><div><strong style="color: var(--text-primary); font-size: 0.88rem;">No output format specified</strong><p style="font-size: 0.8rem;">Hoping the model guesses → Always say "respond in JSON" or "use bullet points"</p></div></div>
+            </div>
+            <div>
+                <h3 style="color: #60a5fa;">📚 RAG</h3>
+                <div class="mistake-item"><span class="mistake-icon">❌</span><div><strong style="color: var(--text-primary); font-size: 0.88rem;">Dumping too much context</strong><p style="font-size: 0.8rem;">20+ chunks → Model ignores the middle. Use top 3-5 relevant ones.</p></div></div>
+                <div class="mistake-item"><span class="mistake-icon">❌</span><div><strong style="color: var(--text-primary); font-size: 0.88rem;">Bad chunking strategy</strong><p style="font-size: 0.8rem;">Blindly splitting at 512 tokens → Use semantic/meaningful boundaries</p></div></div>
+            </div>
+            <div>
+                <h3 style="color: #f87171;">🔧 Fine-Tuning</h3>
+                <div class="mistake-item" style="border: 1px solid rgba(233,69,96,0.3);"><span class="mistake-icon">🚨</span><div><strong style="color: var(--accent-pink); font-size: 0.88rem;">Using it to teach facts</strong><p style="font-size: 0.8rem;">Facts = RAG. Fine-tuning is for consistent style/format only.</p></div></div>
+                <div class="mistake-item"><span class="mistake-icon">❌</span><div><strong style="color: var(--text-primary); font-size: 0.88rem;">Skipping prompting first</strong><p style="font-size: 0.8rem;">Always try prompt + RAG before fine-tuning. Most problems are solved without it.</p></div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 5 — PROMPTING OVERVIEW
+     ═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="slide-5" data-notes="OK now let's quickly go through each technique. We have covered prompting in previous sessions so I will keep this brief.||Prompting is just writing good instructions. There are a few techniques you should know. Zero-shot means you just ask the question directly — no examples. It works for simple stuff. Few-shot means you give the model 2 to 3 examples before your actual question. This makes the output much more consistent because the model follows the pattern. Chain-of-thought means you tell the model to think step by step. This helps with complex reasoning and math.||The key thing to remember about prompting is — it is always your starting point. It is free, it is instant, and it works with any model. The downside is that it cannot inject your private data, and the output can be inconsistent at scale.||If you want to look at the code example here, you can see how a zero-shot just asks a question directly, and a few-shot gives examples first. The few-shot gives you a consistent format like CATEGORY followed by CONFIDENCE PERCENT, which is much easier to parse downstream.">
+    <span class="slide-number">05 / 09</span>
+    <div>
+        <h2>🎯 Prompting — <span style="color: #a78bfa;">The Instruction Layer</span></h2>
+        <p class="subtitle" style="font-size:1rem; margin-bottom: 16px;">"How you talk to the model" — always start here</p>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr><th>Technique</th><th>What It Means</th><th>When to Use</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Zero-shot</td><td>Just ask directly, no examples</td><td>Simple questions, quick tasks</td></tr>
+                    <tr><td>Few-shot</td><td>Give 2-3 examples first, then ask</td><td>Need consistent output format</td></tr>
+                    <tr><td>Chain-of-Thought</td><td>Tell model to "think step by step"</td><td>Complex reasoning, multi-step problems</td></tr>
+                    <tr><td>System Prompt</td><td>Set a role/persona for the model</td><td>Consistent behavior across conversations</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="code-block code-block-small" style="margin-top: 16px;">
+            <span class="lang-label">Example</span>
+<pre><span class="code-comment"># Zero-shot — just ask (simple but unpredictable format)</span>
+<span class="code-string">"Classify this email: 'The AC on floor 5 is broken'"</span>
+<span class="code-comment"># Output: "This is a Maintenance request"  — works but format varies</span>
+
+<span class="code-comment"># Few-shot — give examples first (consistent output format)</span>
+<span class="code-string">"Examples:</span>
+<span class="code-string">  'Rent failed' → BILLING | 95%</span>
+<span class="code-string">  'Elevator stuck' → MAINTENANCE | 98%</span>
+<span class="code-string">  Classify: 'AC broken on floor 5'"</span>
+<span class="code-comment"># Output: MAINTENANCE | 96%  — consistent, parseable every time</span></pre>
+        </div>
+
+        <div class="grid-2" style="margin-top: 12px;">
+            <div class="card" style="padding: 16px 20px;">
+                <h4 style="color: var(--accent-green); font-size: 0.9rem;">✅ Pros</h4>
+                <p style="font-size: 0.85rem;">Free • Instant • No setup needed • Works with any model</p>
+            </div>
+            <div class="card" style="padding: 16px 20px;">
+                <h4 style="color: var(--accent-red); font-size: 0.9rem;">❌ Cons</h4>
+                <p style="font-size: 0.85rem;">Can't inject private data • Output can be inconsistent at scale</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 6 — RAG OVERVIEW
+     ═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="slide-6" data-notes="Next is RAG — Retrieval Augmented Generation. This is probably the most important one for us because most enterprise use cases need the model to know things it was never trained on — like our internal documents, policies, or databases.||The way RAG works is actually very simple. There are two phases. The first is the setup phase — you do this once. You take your documents — PDFs, policies, whatever — you split them into chunks, convert those chunks into numbers called embeddings, and store them in a vector database. Think of a vector database as a smart search engine that understands meaning, not just keywords.||The second phase happens every time a user asks a question. You take their question, convert it to an embedding too, search the vector database for the most similar chunks, pull out the top 3 to 5 chunks, and then send those chunks along with the question to the LLM. The LLM now has the context it needs and gives you a grounded answer based on your actual documents.||Why is this better than just putting all your documents in the prompt? Because LLMs have a context window limit and because the more irrelevant stuff you put in, the worse the answer gets. RAG fetches ONLY the relevant parts.||The big advantage of RAG is data freshness — when your documents change, you just update the vector database. No retraining needed.">
+    <span class="slide-number">06 / 09</span>
+    <div>
+        <h2>📚 RAG — <span style="color: #60a5fa;">The Knowledge Layer</span></h2>
+        <p class="subtitle" style="font-size:1rem; margin-bottom: 16px;">"What you show the model" — give it your data at query time</p>
+
+        <div class="grid-2">
+            <div class="card" style="border-top: 3px solid var(--accent-orange);">
+                <h4>📥 Phase 1: Setup <span style="color:var(--text-muted); font-weight:400; font-size:0.85rem;">(Do once)</span></h4>
+                <div class="flow-diagram" style="flex-direction: column; gap: 6px; align-items: stretch;">
+                    <div class="flow-node" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: var(--accent-orange);">📄 Your Documents (PDFs, Policies)</div>
+                    <div style="text-align:center; color: var(--text-muted);">↓ Split into pieces</div>
+                    <div class="flow-node" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: var(--accent-orange);">✂️ Chunks of text</div>
+                    <div style="text-align:center; color: var(--text-muted);">↓ Convert to numbers</div>
+                    <div class="flow-node" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: var(--accent-orange);">🗄️ Store in Vector Database</div>
+                </div>
+            </div>
+            <div class="card" style="border-top: 3px solid var(--accent-blue);">
+                <h4>🔍 Phase 2: Every Query <span style="color:var(--text-muted); font-weight:400; font-size:0.85rem;">(Real-time)</span></h4>
+                <div class="flow-diagram" style="flex-direction: column; gap: 6px; align-items: stretch;">
+                    <div class="flow-node" style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); color: var(--accent-blue);">❓ User asks a question</div>
+                    <div style="text-align:center; color: var(--text-muted);">↓ Find relevant chunks</div>
+                    <div class="flow-node" style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); color: var(--accent-blue);">📋 Top 3-5 matching chunks</div>
+                    <div style="text-align:center; color: var(--text-muted);">↓ Send to LLM with question</div>
+                    <div class="flow-node" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: var(--accent-green);">✅ Grounded answer from your data</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 12px;">
+            <div class="card" style="padding: 16px 20px;">
+                <h4 style="color: var(--accent-green); font-size: 0.9rem;">✅ Pros</h4>
+                <p style="font-size: 0.85rem;">Uses your private data • Always up-to-date • Reduces hallucination • No model retraining</p>
+            </div>
+            <div class="card" style="padding: 16px 20px;">
+                <h4 style="color: var(--accent-red); font-size: 0.9rem;">❌ Cons</h4>
+                <p style="font-size: 0.85rem;">Needs vector DB setup • Answer quality depends on chunk quality • Slightly slower</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 7 — FINE-TUNING OVERVIEW
+     ═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="slide-7" data-notes="Last one — Fine-tuning. This is the heaviest approach and you should use it only when prompting and RAG are not enough.||What fine-tuning does is — you give the model hundreds of examples of 'when someone asks THIS, respond like THIS.' After training, the model permanently learns that behavior. It always responds in your format, your tone, your style — without you having to tell it every time in the prompt.||The process is straightforward. Step 1: You create a JSONL file — each line has a system message, a user message, and the ideal assistant response. You need 100 to 500 of these. Step 2: You upload this to a service like AWS Bedrock and run a training job. Step 3: You get a new model ID that behaves differently.||There are different methods. Full fine-tuning updates all the model weights — this is expensive and rarely done. LoRA updates only a small percentage of the weights — this is what people actually use. QLoRA is even cheaper because it uses quantization — you can do this on consumer GPUs.||The key thing to remember: fine-tuning teaches HOW to respond, not WHAT to know. For facts and data, use RAG. For consistent behavior at scale, fine-tune.||That's it for the three techniques! Thank you everyone. I hope this gives you a clear framework for when to use which. Any questions?">
+    <span class="slide-number">07 / 09</span>
+    <div>
+        <h2>🔧 Fine-Tuning — <span style="color: #f87171;">The Behavior Layer</span></h2>
+        <p class="subtitle" style="font-size:1rem; margin-bottom: 16px;">"How you train the model" — last resort, for permanent behavior change</p>
+
+        <div class="grid-2" style="margin-bottom: 16px;">
+            <div>
+                <h3 style="margin-bottom: 10px;">How It Works</h3>
+                <div class="steps-vertical">
+                    <div class="step-item">
+                        <div class="step-number" style="background: rgba(59,130,246,0.15); color: var(--accent-blue);">1</div>
+                        <div class="step-content"><h4>Create training examples (JSONL)</h4><p>100–500+ examples of ideal input/output pairs</p></div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number" style="background: rgba(139,92,246,0.15); color: var(--accent-purple);">2</div>
+                        <div class="step-content"><h4>Run a training job</h4><p>Upload to AWS Bedrock / Azure / Google and train</p></div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number" style="background: rgba(16,185,129,0.15); color: var(--accent-green);">3</div>
+                        <div class="step-content"><h4>Get a new model that behaves differently</h4><p>Same API, new model ID — permanently changed</p></div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h3 style="margin-bottom: 10px;">Methods</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Method</th><th>Effort</th><th>Best For</th></tr></thead>
+                        <tbody>
+                            <tr><td>Full Fine-Tune</td><td>🔴 Very High</td><td>Rarely used in practice</td></tr>
+                            <tr><td>LoRA</td><td>🟡 Moderate</td><td>Most practical approach</td></tr>
+                            <tr><td>QLoRA</td><td>🟢 Low</td><td>Works on consumer GPUs</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 style="margin-top: 16px; margin-bottom: 10px;">Training Data Example</h3>
+                <div class="code-block code-block-small">
+                    <span class="lang-label">JSONL</span>
+<pre><span class="code-comment">// Each line teaches one behavior</span>
+{<span class="code-string">"messages"</span>: [
+  {<span class="code-string">"role"</span>: <span class="code-string">"system"</span>, <span class="code-string">"content"</span>: <span class="code-string">"Respond in JSON."</span>},
+  {<span class="code-string">"role"</span>: <span class="code-string">"user"</span>, <span class="code-string">"content"</span>: <span class="code-string">"AC broken floor 5"</span>},
+  {<span class="code-string">"role"</span>: <span class="code-string">"assistant"</span>, <span class="code-string">"content"</span>:
+    <span class="code-string">"{\"category\": \"MAINTENANCE\",
+     \"priority\": \"HIGH\"}"</span>}
+]}</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card" style="padding: 16px 20px;">
+                <h4 style="color: var(--accent-green); font-size: 0.9rem;">✅ Pros</h4>
+                <p style="font-size: 0.85rem;">Consistent output every time • No long prompts needed • Fast inference</p>
+            </div>
+            <div class="card" style="padding: 16px 20px;">
+                <h4 style="color: var(--accent-red); font-size: 0.9rem;">❌ Cons</h4>
+                <p style="font-size: 0.85rem;">Needs lots of training data • Weeks to set up • Static — can't learn new facts</p>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 8 — HYBRID ARCHITECTURE
+     ═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="slide-8" data-notes="Now here is the key insight — in real production systems, you do not pick just one. You use all three together. Let me walk you through how they combine.||Think of a property management assistant. A user asks 'What is the occupancy trend for Tower B?' Here is what happens behind the scenes.||Layer 1 is Prompting. Your system prompt says — you are a property analyst, respond in JSON, include a recommendation and a risk score, do not speculate. This controls the reasoning and output format.||Layer 2 is RAG. The system searches your vector database and pulls the latest lease documents, occupancy reports, and market rates for Tower B. Now the model has the actual data to work with.||Layer 3 is Fine-tuning. Instead of using a base model, you use a fine-tuned version that has learned your company's report format, risk scoring methodology, and professional tone. So the output is always consistent.||The result is a grounded, well-formatted, consistently styled answer. Without any one layer, something breaks. Without prompting — inconsistent responses. Without RAG — hallucinated facts. Without fine-tuning — you need very complex prompts every time.||This is how real AI products work. The three layers are not alternatives — they are layers that stack on top of each other.">
+    <span class="slide-number">08 / 09</span>
+    <div>
+        <h2>🏗️ Hybrid Architecture — <span class="gradient-text">All Three Combined</span></h2>
+        <p class="subtitle" style="font-size:1rem; margin-bottom: 16px;">How production systems actually work — all three layers stacked together</p>
+
+        <div class="two-col">
+            <div>
+                <h3>How They Stack</h3>
+                <div class="steps-vertical">
+                    <div class="step-item" style="border-left: 3px solid var(--accent-pink);">
+                        <div class="step-number" style="background: rgba(233,69,96,0.15); color: var(--accent-pink);">👤</div>
+                        <div class="step-content"><h4>User Query</h4><p>"What's the occupancy trend for Tower B?"</p></div>
+                    </div>
+                    <div class="step-item" style="border-left: 3px solid var(--accent-purple);">
+                        <div class="step-number" style="background: rgba(139,92,246,0.15); color: var(--accent-purple);">🎯</div>
+                        <div class="step-content"><h4>Layer 1: Prompting</h4><p>System prompt → Analyst role, JSON format, no-speculation rule</p></div>
+                    </div>
+                    <div class="step-item" style="border-left: 3px solid var(--accent-blue);">
+                        <div class="step-number" style="background: rgba(59,130,246,0.15); color: var(--accent-blue);">📚</div>
+                        <div class="step-content"><h4>Layer 2: RAG</h4><p>Retrieve lease docs, occupancy reports, market rates → Top 5 chunks</p></div>
+                    </div>
+                    <div class="step-item" style="border-left: 3px solid var(--accent-pink);">
+                        <div class="step-number" style="background: rgba(233,69,96,0.15); color: var(--accent-pink);">🔧</div>
+                        <div class="step-content"><h4>Layer 3: Fine-Tuned Model</h4><p>Model trained on your report format, risk scoring, professional tone</p></div>
+                    </div>
+                    <div class="step-item" style="border-left: 3px solid var(--accent-green);">
+                        <div class="step-number" style="background: rgba(16,185,129,0.15); color: var(--accent-green);">✅</div>
+                        <div class="step-content"><h4>Grounded Output</h4><p>Consistent, factual, well-formatted answer every time</p></div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h3>What Each Layer Adds</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Layer</th><th>Role</th><th>Without It</th></tr></thead>
+                        <tbody>
+                            <tr><td>🎯 Prompt</td><td>Controls reasoning &amp; format</td><td>Inconsistent responses</td></tr>
+                            <tr><td>📚 RAG</td><td>Injects real-time data</td><td>Hallucinated facts</td></tr>
+                            <tr><td>🔧 Fine-Tune</td><td>Consistent style &amp; schema</td><td>Complex prompts needed</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="highlight-box" style="margin-top: 16px;">
+                    <h4 style="font-size: 0.95rem; color: var(--text-primary); margin-bottom: 8px;">💡 Key Takeaway</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary);">These are not alternatives — they are <strong style="color: var(--accent-green);">layers that stack</strong>. Remove any one layer and something breaks.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 9 — CODE EXAMPLE: ALL THREE IN ACTION
+     ═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="slide-9" data-notes="Let me show you what all three look like in code. This is one connected example — same use case, building on top of each layer.||Step 1 is plain prompting. You just send a question with a system prompt. You tell the model — you are a property analyst, respond in JSON. That is it. The model will try its best but it does not have your actual data, so it might make things up.||Step 2 adds RAG on top. Before sending the question to the model, you search your vector database for relevant chunks — like lease documents and occupancy data. You put those chunks into the prompt as context. Now the model has real facts to work with. The answer is grounded.||Step 3 swaps in a fine-tuned model. Instead of using the base model ID, you use your custom fine-tuned model ID. Everything else stays the same — same prompt, same RAG context. But now the model always responds in your exact format, your tone, your schema — without you having to specify it every time.||Notice how each step builds on the previous one. Prompting is the foundation. RAG adds knowledge. Fine-tuning adds consistent behavior. This is what production-grade AI looks like.||That wraps up today's session. To recap — Prompting is how you talk to it, start here. RAG is what you show it, for company data. Fine-tuning is how you train it, for consistent behavior. Thank you everyone. Questions?">
+    <span class="slide-number">09 / 09</span>
+    <div>
+        <h2>💻 <span class="gradient-text">Code Example</span> — All Three in Action</h2>
+        <p class="subtitle" style="font-size:1rem; margin-bottom: 16px;">Same use case, building on each layer — Prompting → RAG → Fine-Tuning</p>
+
+        <div class="code-block">
+            <span class="lang-label">Python</span>
+<pre><span class="code-keyword">import</span> anthropic, chromadb
+client = anthropic.Anthropic()
+
+question = <span class="code-string">"What is the occupancy trend for Tower B?"</span>
+
+<span class="code-comment"># ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+<span class="code-comment"># STEP 1: PROMPTING ONLY — just talk to the model</span>
+<span class="code-comment"># ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+response = client.messages.create(
+    model=<span class="code-string">"claude-sonnet-4-20250514"</span>,
+    system=<span class="code-string">"You are a property analyst. Respond in JSON with: summary, trend, recommendation."</span>,
+    messages=[{<span class="code-string">"role"</span>: <span class="code-string">"user"</span>, <span class="code-string">"content"</span>: question}]
+)
+<span class="code-comment"># ⚠️ Works but model has NO real data — may hallucinate facts about Tower B</span>
+
+
+<span class="code-comment"># ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+<span class="code-comment"># STEP 2: ADD RAG — give it real data before asking</span>
+<span class="code-comment"># ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+collection = chromadb.Client().get_collection(<span class="code-string">"property_docs"</span>)
+results = collection.query(query_texts=[question], n_results=<span class="code-variable">5</span>)
+context = <span class="code-string">"\n"</span>.join(results[<span class="code-string">"documents"</span>][<span class="code-variable">0</span>])  <span class="code-comment"># top 5 relevant chunks</span>
+
+response = client.messages.create(
+    model=<span class="code-string">"claude-sonnet-4-20250514"</span>,
+    system=<span class="code-string">"You are a property analyst. Use ONLY the provided context. Respond in JSON."</span>,
+    messages=[{<span class="code-string">"role"</span>: <span class="code-string">"user"</span>, <span class="code-string">"content"</span>: f<span class="code-string">"Context:\n{context}\n\nQuestion: {question}"</span>}]
+)
+<span class="code-comment"># ✅ Now grounded in real docs — but output format may still vary</span>
+
+
+<span class="code-comment"># ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+<span class="code-comment"># STEP 3: ADD FINE-TUNING — swap in your trained model</span>
+<span class="code-comment"># ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+response = client.messages.create(
+    model=<span class="code-string">"claude-haiku-property-v1"</span>,  <span class="code-comment"># ← fine-tuned model, same API</span>
+    system=<span class="code-string">"You are a property analyst. Use ONLY the provided context."</span>,
+    messages=[{<span class="code-string">"role"</span>: <span class="code-string">"user"</span>, <span class="code-string">"content"</span>: f<span class="code-string">"Context:\n{context}\n\nQuestion: {question}"</span>}]
+)
+<span class="code-comment"># 🏆 Grounded + consistent format + professional tone — every single time</span></pre>
+        </div>
+
+        <div class="grid-3" style="margin-top: 16px;">
+            <div class="card" style="text-align: center; padding: 16px; border-top: 3px solid var(--accent-purple);">
+                <h4 style="font-size: 0.9rem;">Step 1: Prompting</h4>
+                <p style="font-size: 0.8rem;">Controls reasoning &amp; format</p>
+            </div>
+            <div class="card" style="text-align: center; padding: 16px; border-top: 3px solid var(--accent-blue);">
+                <h4 style="font-size: 0.9rem;">+ Step 2: RAG</h4>
+                <p style="font-size: 0.8rem;">Adds real data &amp; facts</p>
+            </div>
+            <div class="card" style="text-align: center; padding: 16px; border-top: 3px solid var(--accent-pink);">
+                <h4 style="font-size: 0.9rem;">+ Step 3: Fine-Tune</h4>
+                <p style="font-size: 0.8rem;">Consistent behavior at scale</p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <h3 style="text-transform: none; letter-spacing: 0; font-size: 1.3rem; color: var(--text-primary);">🎤 Thank You — Questions?</h3>
+            <p style="color: var(--text-muted);">AI Learning Series</p>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+    // ── Slide Navigation ──
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    const nav = document.getElementById('slideNav');
+    const progressBar = document.getElementById('progressBar');
+    const navHint = document.getElementById('navHint');
+
+    // Create nav dots
+    slides.forEach((_, i) => {
+        const dot = document.createElement('a');
+        dot.href = `#slide-${i + 1}`;
+        dot.title = `Slide ${i + 1}`;
+        nav.appendChild(dot);
+    });
+
+    // Track current slide
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const index = Array.from(slides).indexOf(entry.target);
+                updateNav(index);
+                updateNotes(entry.target);
+            }
+        });
+    }, { threshold: 0.5 });
+
+    slides.forEach(s => observer.observe(s));
+
+    function updateNav(index) {
+        document.querySelectorAll('.slide-indicator a').forEach((dot, i) => {
+            dot.classList.toggle('active', i === index);
+        });
+        progressBar.style.width = `${((index + 1) / totalSlides) * 100}%`;
+    }
+
+    // ── Presenter Notes ──
+    const notesPanel = document.getElementById('presenterPanel');
+    const notesList = document.getElementById('presenterNotes');
+    let notesVisible = false;
+
+    function toggleNotes() {
+        notesVisible = !notesVisible;
+        notesPanel.classList.toggle('visible', notesVisible);
+        document.getElementById('notesBtn').textContent = notesVisible ? '📝 Hide Notes' : '📝 Notes (N)';
+    }
+
+    function updateNotes(slide) {
+        const rawNotes = slide.getAttribute('data-notes') || 'No notes for this slide.';
+        const noteItems = rawNotes.split('||').map(n => n.trim());
+        notesList.innerHTML = noteItems.map(n => `<li>${n}</li>`).join('');
+    }
+
+    // ── Keyboard Navigation ──
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'PageDown') {
+            e.preventDefault();
+            navigateSlide(1);
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'PageUp') {
+            e.preventDefault();
+            navigateSlide(-1);
+        } else if (e.key === 'n' || e.key === 'N') {
+            toggleNotes();
+        }
+    });
+
+    function navigateSlide(direction) {
+        const current = getCurrentSlideIndex();
+        const next = Math.max(0, Math.min(totalSlides - 1, current + direction));
+        slides[next].scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function getCurrentSlideIndex() {
+        let closest = 0;
+        let minDist = Infinity;
+        slides.forEach((s, i) => {
+            const dist = Math.abs(s.getBoundingClientRect().top);
+            if (dist < minDist) { minDist = dist; closest = i; }
+        });
+        return closest;
+    }
+
+    // ── Hide nav hint after scroll ──
+    let scrolled = false;
+    window.addEventListener('scroll', () => {
+        if (!scrolled) {
+            scrolled = true;
+            setTimeout(() => navHint.classList.add('hidden'), 3000);
+        }
+    }, { once: true });
+
+    // ── Animate on scroll ──
+    const animObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.querySelectorAll('.animate-in').forEach(el => {
+                    el.style.animationPlayState = 'running';
+                });
+            }
+        });
+    }, { threshold: 0.3 });
+
+    slides.forEach(s => animObserver.observe(s));
+</script>
+
+</body>
+</html>
